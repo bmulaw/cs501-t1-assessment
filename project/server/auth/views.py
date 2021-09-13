@@ -29,16 +29,18 @@ class RegisterAPI(MethodView):
                     email=post_data.get('email'),
                     password=post_data.get('password')
                 )
-
+                
                 # insert the user
                 db.session.add(user)
                 db.session.commit()
                 # generate the auth token
                 auth_token = user.encode_auth_token(user.id)
+                # removed the .decode because this token is already decoded
+                # https://stackoverflow.com/questions/50979667/python-attributeerror-str-object-has-no-attribute-decode
                 responseObject = {
                     'status': 'success',
                     'message': 'Successfully registered.',
-                    'auth_token': auth_token.decode()
+                    'auth_token': auth_token
                 }
                 return make_response(jsonify(responseObject)), 201
             except Exception as e:
@@ -55,12 +57,33 @@ class RegisterAPI(MethodView):
             return make_response(jsonify(responseObject)), 202
 
 
+class GetUserAPI(MethodView):
+    """
+    Get User API Resource
+    """
+
+    def get(self):
+        # https://stackabuse.com/using-sqlalchemy-with-flask-and-postgresql/
+        all_users = User.query.all()
+        responseObject = {
+            'status': 'success',
+            'message': [user.email for user in all_users]
+        }
+        return make_response(jsonify(responseObject)), 201
+
+
 # define the API resources
 registration_view = RegisterAPI.as_view('register_api')
+users = GetUserAPI.as_view('user_api')
 
 # add Rules for API Endpoints
 auth_blueprint.add_url_rule(
     '/auth/register',
     view_func=registration_view,
     methods=['POST', 'GET']
+)
+auth_blueprint.add_url_rule(
+    '/users/index',
+    view_func=users,
+    methods=['GET']
 )
